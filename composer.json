@@ -1,0 +1,25 @@
+{
+    "name": "saasformation/framework-message-bus",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "SaaSFormation",
+            "email": "info@saasformation.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "SaaSFormation\\Framework\\MessageBus\\": "src"
+        }
+    },
+    "require": {
+        "php": "^8.3",
+        "saasformation/framework-shared-kernel": "^1.0"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "1.x-dev"
+        }
+    }
+}
