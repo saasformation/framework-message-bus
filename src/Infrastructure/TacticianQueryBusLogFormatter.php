@@ -15,7 +15,7 @@ class TacticianQueryBusLogFormatter implements Formatter
             throw new Exception('Query must be instance of CommandInterface');
         }
 
-        $logger->debug("Query {$command->queryCode()} received");
+        $logger->debug("Query {$command->getQueryCode()} received");
     }
 
     public function logCommandSucceeded(LoggerInterface $logger, $command, $returnValue)
@@ -24,7 +24,7 @@ class TacticianQueryBusLogFormatter implements Formatter
             throw new Exception('Query must be instance of CommandInterface');
         }
 
-        $logger->debug("Query {$command->queryCode()} succeeded");
+        $logger->debug("Query {$command->getQueryCode()} succeeded");
     }
 
     public function logCommandFailed(LoggerInterface $logger, $command, Exception $e)
@@ -33,7 +33,7 @@ class TacticianQueryBusLogFormatter implements Formatter
             throw new Exception('Query must be instance of CommandInterface');
         }
 
-        $logger->error("Query {$command->queryCode()} failed", [
+        $logger->error("Query {$command->getQueryCode()} failed", [
             'error' => [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),

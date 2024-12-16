@@ -2,12 +2,14 @@
 
 namespace SaaSFormation\Framework\MessageBus\Infrastructure;
 
+use Assert\Assert;
 use League\Tactician\Handler\CommandNameExtractor\CommandNameExtractor;
 use League\Tactician\Handler\Locator\HandlerLocator;
 use League\Tactician\Handler\MethodNameInflector\MethodNameInflector;
 use League\Tactician\Middleware;
 use SaaSFormation\Framework\SharedKernel\Application\EventDispatcher\EventDispatcherInterface;
 use SaaSFormation\Framework\SharedKernel\Application\Messages\CommandInterface;
+use SaaSFormation\Framework\SharedKernel\Common\Identity\IdInterface;
 use SaaSFormation\Framework\SharedKernel\Domain\DomainEventStream;
 
 readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
@@ -35,9 +37,12 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
         $domainEventStream = $handler->{$methodName}($command);
 
         foreach($domainEventStream->events() as $event) {
-            $event->requestId = $command->requestId;
-            $event->correlationId = $command->correlationId;
-            $event->generatorCommandId = $command->commandId;
+            Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class);
+            Assert::that($command->getCorrelationId())->isInstanceOf(IdInterface::class);
+            Assert::that($command->getCommandId())->isInstanceOf(IdInterface::class);
+            $event->setRequestId($command->getRequestId());
+            $event->setCorrelationId($command->getCorrelationId());
+            $event->setGeneratorCommandId($command->getCommandId());
             $this->eventDispatcher->dispatch($event);
         }
     }
