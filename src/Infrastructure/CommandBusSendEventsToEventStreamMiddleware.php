@@ -11,6 +11,7 @@ use SaaSFormation\Framework\SharedKernel\Application\EventDispatcher\EventDispat
 use SaaSFormation\Framework\SharedKernel\Application\Messages\CommandInterface;
 use SaaSFormation\Framework\SharedKernel\Common\Identity\IdInterface;
 use SaaSFormation\Framework\SharedKernel\Domain\DomainEventStream;
+use SaaSFormation\Framework\SharedKernel\Domain\WriteModel\RepositoryInterface;
 
 readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
 {
@@ -18,7 +19,9 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
         private EventDispatcherInterface $eventDispatcher,
         private CommandNameExtractor     $commandNameExtractor,
         private HandlerLocator           $handlerLocator,
-        private MethodNameInflector      $methodNameInflector)
+        private MethodNameInflector      $methodNameInflector,
+        private RepositoryInterface      $repository
+    )
     {
     }
 
@@ -36,13 +39,14 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
         /** @var DomainEventStream $domainEventStream */
         $domainEventStream = $handler->{$methodName}($command);
 
-        foreach($domainEventStream->events() as $event) {
+        foreach ($domainEventStream->events() as $event) {
             Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class);
             Assert::that($command->getCorrelationId())->isInstanceOf(IdInterface::class);
             Assert::that($command->getCommandId())->isInstanceOf(IdInterface::class);
             $event->setRequestId($command->getRequestId());
             $event->setCorrelationId($command->getCorrelationId());
             $event->setGeneratorCommandId($command->getCommandId());
+            $this->repository->save($event);
             $this->eventDispatcher->dispatch($event);
         }
     }
