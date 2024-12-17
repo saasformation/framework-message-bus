@@ -10,6 +10,7 @@ use League\Tactician\Middleware;
 use SaaSFormation\Framework\SharedKernel\Application\EventDispatcher\EventDispatcherInterface;
 use SaaSFormation\Framework\SharedKernel\Application\Messages\CommandInterface;
 use SaaSFormation\Framework\SharedKernel\Common\Identity\IdInterface;
+use SaaSFormation\Framework\SharedKernel\Common\Identity\UUIDFactoryInterface;
 use SaaSFormation\Framework\SharedKernel\Domain\DomainEventStream;
 use SaaSFormation\Framework\SharedKernel\Domain\WriteModel\RepositoryInterface;
 
@@ -20,7 +21,8 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
         private CommandNameExtractor     $commandNameExtractor,
         private HandlerLocator           $handlerLocator,
         private MethodNameInflector      $methodNameInflector,
-        private RepositoryInterface      $repository
+        private RepositoryInterface      $repository,
+        private UUIDFactoryInterface     $UUIDFactory
     )
     {
     }
@@ -38,6 +40,10 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
 
         /** @var DomainEventStream $domainEventStream */
         $domainEventStream = $handler->{$methodName}($command);
+
+        if(!$command->getCommandId()) {
+            $command->setCommandId($this->UUIDFactory->generate());
+        }
 
         foreach ($domainEventStream->events() as $event) {
             Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class);
