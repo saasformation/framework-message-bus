@@ -46,6 +46,10 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
         }
 
         foreach ($domainEventStream->events() as $event) {
+            if(!$event->getDomainEventId()) {
+                $event->setDomainEventId($this->UUIDFactory->generate());
+            }
+
             Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class);
             Assert::that($command->getCorrelationId())->isInstanceOf(IdInterface::class);
             Assert::that($command->getCommandId())->isInstanceOf(IdInterface::class);
