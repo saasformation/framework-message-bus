@@ -38,26 +38,34 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
         $handler = $this->handlerLocator->getHandlerForCommand($commandName);
         $methodName = $this->methodNameInflector->inflect($command, $handler);
 
-        /** @var DomainEventStream $domainEventStream */
-        $domainEventStream = $handler->{$methodName}($command);
+        try {
+            /** @var DomainEventStream $domainEventStream */
+            $domainEventStream = $handler->{$methodName}($command);
 
-        if(!$command->getCommandId()) {
-            $command->setCommandId($this->UUIDFactory->generate());
-        }
-
-        foreach ($domainEventStream->events() as $event) {
-            if(!$event->getDomainEventId()) {
-                $event->setDomainEventId($this->UUIDFactory->generate());
+            if (!$command->getCommandId()) {
+                $command->setCommandId($this->UUIDFactory->generate());
             }
 
-            Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class);
-            Assert::that($command->getCorrelationId())->isInstanceOf(IdInterface::class);
-            Assert::that($command->getCommandId())->isInstanceOf(IdInterface::class);
-            $event->setRequestId($command->getRequestId());
-            $event->setCorrelationId($command->getCorrelationId());
-            $event->setGeneratorCommandId($command->getCommandId());
-            $this->repository->save($event);
-            $this->eventDispatcher->dispatch($event);
+            foreach ($domainEventStream->events() as $event) {
+                if (!$event->getDomainEventId()) {
+                    $event->setDomainEventId($this->UUIDFactory->generate());
+                }
+
+                Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class);
+                Assert::that($command->getCorrelationId())->isInstanceOf(IdInterface::class);
+                Assert::that($command->getCommandId())->isInstanceOf(IdInterface::class);
+                $event->setRequestId($command->getRequestId());
+                $event->setCorrelationId($command->getCorrelationId());
+                $event->setGeneratorCommandId($command->getCommandId());
+                $this->repository->save($event);
+                $this->eventDispatcher->dispatch($event);
+            }
+
+            $command->markAsSucceeded();
+            $this->repository->saveCommand($command);
+        } catch (\Throwable $e) {
+            $command->markAsFailed();
+            $this->repository->saveCommand($command);
         }
     }
 }
