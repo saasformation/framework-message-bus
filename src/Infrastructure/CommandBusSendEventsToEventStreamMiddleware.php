@@ -7,6 +7,8 @@ use League\Tactician\Handler\CommandNameExtractor\CommandNameExtractor;
 use League\Tactician\Handler\Locator\HandlerLocator;
 use League\Tactician\Handler\MethodNameInflector\MethodNameInflector;
 use League\Tactician\Middleware;
+use SaaSFormation\Framework\MongoDBBasedReadModel\Infrastructure\ReadModel\MongoDBClient;
+use SaaSFormation\Framework\MongoDBBasedReadModel\Infrastructure\ReadModel\MongoDBClientProvider;
 use SaaSFormation\Framework\SharedKernel\Application\EventDispatcher\EventDispatcherInterface;
 use SaaSFormation\Framework\SharedKernel\Application\Messages\CommandInterface;
 use SaaSFormation\Framework\SharedKernel\Common\Identity\IdInterface;
@@ -16,15 +18,19 @@ use SaaSFormation\Framework\SharedKernel\Domain\WriteModel\RepositoryInterface;
 
 readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
 {
+    private MongoDBClient $mongoDBClient;
+
     public function __construct(
         private EventDispatcherInterface $eventDispatcher,
         private CommandNameExtractor     $commandNameExtractor,
         private HandlerLocator           $handlerLocator,
         private MethodNameInflector      $methodNameInflector,
         private RepositoryInterface      $repository,
-        private UUIDFactoryInterface     $UUIDFactory
+        private UUIDFactoryInterface     $UUIDFactory,
+        private MongoDBClientProvider    $mongoDBClientProvider
     )
     {
+        $this->mongoDBClient = $this->mongoDBClientProvider->provide();
     }
 
     /**
@@ -54,18 +60,28 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
                 Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class);
                 Assert::that($command->getCorrelationId())->isInstanceOf(IdInterface::class);
                 Assert::that($command->getCommandId())->isInstanceOf(IdInterface::class);
+
                 $event->setRequestId($command->getRequestId());
                 $event->setCorrelationId($command->getCorrelationId());
                 $event->setGeneratorCommandId($command->getCommandId());
                 $this->repository->save($event);
+
+                $this->mongoDBClient->beginTransaction($command->getRequestId());
+
                 $this->eventDispatcher->dispatch($event);
+
+                $this->mongoDBClient->commitTransaction($command->getRequestId());
             }
 
             $command->markAsSucceeded();
             $this->repository->saveCommand($command);
         } catch (\Throwable $e) {
+            Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class);
+            $this->mongoDBClient->rollbackTransaction($command->getRequestId());
             $command->markAsFailed();
             $this->repository->saveCommand($command);
+
+            throw $e;
         }
     }
 }
