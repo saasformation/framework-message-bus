@@ -76,8 +76,10 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
             $command->markAsSucceeded();
             $this->repository->saveCommand($command);
         } catch (\Throwable $e) {
-            Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class, "Request id is null at CommandBusSendEventsToEventStreamMiddleware in catch");
-            $this->mongoDBClient->rollbackTransaction($command->getRequestId());
+            if($command->getRequestId() !== null) {
+                $this->mongoDBClient->rollbackTransaction($command->getRequestId());
+            }
+
             $command->markAsFailed();
             $this->repository->saveCommand($command);
 
