@@ -57,9 +57,9 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
                     $event->setDomainEventId($this->UUIDFactory->generate());
                 }
 
-                Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class);
-                Assert::that($command->getCorrelationId())->isInstanceOf(IdInterface::class);
-                Assert::that($command->getCommandId())->isInstanceOf(IdInterface::class);
+                Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class, "Request id is null at CommandBusSendEventsToEventStreamMiddleware");
+                Assert::that($command->getCorrelationId())->isInstanceOf(IdInterface::class, "Correlation id is null at CommandBusSendEventsToEventStreamMiddleware");
+                Assert::that($command->getCommandId())->isInstanceOf(IdInterface::class, "Command id is null at CommandBusSendEventsToEventStreamMiddleware");
 
                 $event->setRequestId($command->getRequestId());
                 $event->setCorrelationId($command->getCorrelationId());
@@ -76,7 +76,7 @@ readonly class CommandBusSendEventsToEventStreamMiddleware implements Middleware
             $command->markAsSucceeded();
             $this->repository->saveCommand($command);
         } catch (\Throwable $e) {
-            Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class);
+            Assert::that($command->getRequestId())->isInstanceOf(IdInterface::class, "Request id is null at CommandBusSendEventsToEventStreamMiddleware in catch");
             $this->mongoDBClient->rollbackTransaction($command->getRequestId());
             $command->markAsFailed();
             $this->repository->saveCommand($command);
